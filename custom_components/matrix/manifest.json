@@ -1,0 +1,11 @@
+{
+  "domain": "matrix",
+  "name": "Matrix Nio",
+  "codeowners": ["@PaarthShah"],
+  "documentation": "https://www.home-assistant.io/integrations/matrix",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/PaarthShah/matrix-nio-hacs/issues",
+  "loggers": ["matrix_client"],
+  "requirements": ["matrix-nio==0.20.2", "Pillow==9.5.0"],
+  "version": "v1.0.0"
+}
