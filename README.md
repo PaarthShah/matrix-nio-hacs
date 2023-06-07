@@ -8,7 +8,7 @@
 ![Project Maintenance][maintenance-shield]
 
 [![Community Forum][forum-shield]][forum]
-![Matrix][matrix-chat]
+[![Matrix][matrix-chat]][matrix-chat-link]
 
 _Integration to integrate with Matrix Homeservers using [matrix-nio](https://github.com/poljar/matrix-nio). Replaces the core HomeAssistant `matrix` integration._
 
@@ -42,3 +42,4 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 [releases-shield]: https://img.shields.io/github/release/PaarthShah/matrix-nio-hacs.svg?style=for-the-badge
 [releases]: https://github.com/PaarthShah/matrix-nio-hacs/releases
 [matrix-chat]: https://img.shields.io/matrix/matrix-nio-hacs:shahpaarth.com?label=Matrix%20Chatroom&server_fqdn=matrix.shahpaarth.com&style=for-the-badge
+[matrix-chat-link]: https://matrix.to/#/#matrix-nio-hacs:shahpaarth.com
