@@ -5,7 +5,18 @@ import re
 import tempfile
 from unittest.mock import patch
 
+import pytest
 from PIL import Image
+from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_PLATFORM,
+    CONF_USERNAME,
+    CONF_VERIFY_SSL,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 from nio import (
     AsyncClient,
     ErrorResponse,
@@ -17,8 +28,7 @@ from nio import (
     Response,
     UploadResponse,
 )
-import pytest
-from pytest_homeassistant_custom_component.plugins import enable_custom_integrations
+from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.matrix import (
     CONF_COMMANDS,
@@ -32,19 +42,6 @@ from custom_components.matrix import (
 )
 from custom_components.matrix.const import DOMAIN as MATRIX_DOMAIN
 from custom_components.matrix.notify import CONF_DEFAULT_ROOM
-from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
-from homeassistant.const import (
-    CONF_NAME,
-    CONF_PASSWORD,
-    CONF_PLATFORM,
-    CONF_USERNAME,
-    CONF_VERIFY_SSL,
-)
-from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
-
-from pytest_homeassistant_custom_component.common import async_capture_events
-from pytest_homeassistant_custom_component.plugins import enable_custom_integrations
 
 TEST_NOTIFIER_NAME = "matrix_notify"
 
@@ -60,7 +57,7 @@ NIO_IMPORT_PREFIX = "custom_components.matrix.nio."
 
 @pytest.fixture(autouse=True)
 def my_enable_custom_integrations(enable_custom_integrations):
-    ...
+    """Use this fixture to support pytest-homeassistant-custom-component."""
 
 
 class _MockAsyncClient(AsyncClient):
