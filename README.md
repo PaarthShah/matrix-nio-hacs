@@ -17,13 +17,25 @@ _Integration to integrate with Matrix Homeservers using [matrix-nio](https://git
 
 ## Installation
 
+### HACS (Preferred)
+
+1. [Add](http://homeassistant.local:8123/hacs/integrations) the custom integration repository: https://github.com/PaarthShah/matrix-nio-hacs
+2. Select `Matrix Nio` in the Integration tab and click `download`
+3. Restart Home Assistant
+4. Done!
+
+### Manual
+
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-1. If you do not have a `custom_components` directory (folder) there, you need to create it.
-1. In the `custom_components` directory (folder) create a new folder called `matrix`.
-1. Download _all_ the files from the `custom_components/matrix/` directory (folder) in this repository.
-1. Place the files you downloaded in the new directory (folder) you created.
-1. Restart Home Assistant
-1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Matrix Nio"
+2. If you do not have a `custom_components` directory (folder) there, you need to create it.
+3. In the `custom_components` directory (folder) create a new folder called `matrix`.
+4. Download _all_ the files from the `custom_components/matrix/` directory (folder) in this repository.
+5. Place the files you downloaded in the new directory (folder) you created.
+6. Restart Home Assistant
+7. Done!
+
+## Usage
+For `v1.0.0`, all documentation available for the [default matrix integrations](https://www.home-assistant.io/integrations/matrix/) is fully-applicable and should work as-stated with 0 changes.
 
 ## Contributions are welcome!
 
