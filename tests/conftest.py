@@ -1,13 +1,13 @@
 """Define fixtures available for all tests."""
 from __future__ import annotations
 
-import re
 import tempfile
 from unittest.mock import patch
 
 import pytest
 from PIL import Image
 from homeassistant.components.notify import DOMAIN as NOTIFY_DOMAIN
+from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
     CONF_NAME,
     CONF_PASSWORD,
@@ -28,7 +28,10 @@ from nio import (
     Response,
     UploadResponse,
 )
-from pytest_homeassistant_custom_component.common import async_capture_events, MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    async_capture_events,
+    MockConfigEntry,
+)
 
 from custom_components.matrix import (
     CONF_COMMANDS,
@@ -105,9 +108,8 @@ class _MockAsyncClient(AsyncClient):
         return UploadResponse(content_uri="mxc://example.com/randomgibberish")
 
 
-MOCK_CONFIG_ENTRY = MockConfigEntry(
-    domain=MATRIX_DOMAIN,
-    data={
+MOCK_CONFIG_DATA = {
+    MATRIX_DOMAIN: {
         CONF_HOMESERVER: "https://matrix.example.com",
         CONF_USERNAME: TEST_MXID,
         CONF_PASSWORD: TEST_PASSWORD,
@@ -119,21 +121,22 @@ MOCK_CONFIG_ENTRY = MockConfigEntry(
                 CONF_NAME: "WordTriggerEventName",
             },
             {
-                CONF_EXPRESSION: re.compile("My name is (?P<name>.*)"),
+                CONF_EXPRESSION: "My name is (?P<name>.*)",
                 CONF_NAME: "ExpressionTriggerEventName",
             },
         ],
     },
-)
-
-
-MOCK_CONFIG_DATA = {
     NOTIFY_DOMAIN: {
         CONF_NAME: TEST_NOTIFIER_NAME,
         CONF_PLATFORM: MATRIX_DOMAIN,
         CONF_DEFAULT_ROOM: TEST_DEFAULT_ROOM,
     },
 }
+
+MOCK_CONFIG_ENTRY = MockConfigEntry(
+    domain=MATRIX_DOMAIN,
+    data=MOCK_CONFIG_DATA[MATRIX_DOMAIN],
+)
 
 MOCK_WORD_COMMANDS = {
     "!RoomIdString:example.com": {
@@ -155,14 +158,14 @@ MOCK_WORD_COMMANDS = {
 MOCK_EXPRESSION_COMMANDS = {
     "!RoomIdString:example.com": [
         {
-            "expression": re.compile("My name is (?P<name>.*)"),
+            "expression": "My name is (?P<name>.*)",
             "name": "ExpressionTriggerEventName",
             "rooms": ["!RoomIdString:example.com", "#RoomAliasString:example.com"],
         }
     ],
     "#RoomAliasString:example.com": [
         {
-            "expression": re.compile("My name is (?P<name>.*)"),
+            "expression": "My name is (?P<name>.*)",
             "name": "ExpressionTriggerEventName",
             "rooms": ["!RoomIdString:example.com", "#RoomAliasString:example.com"],
         }
@@ -188,8 +191,8 @@ def mock_save_json():
 def mock_load_json():
     """Mock loading access_tokens from a file."""
     with patch(
-            "custom_components.matrix.load_json_object",
-            return_value={TEST_MXID: TEST_TOKEN},
+        "custom_components.matrix.load_json_object",
+        return_value={TEST_MXID: TEST_TOKEN},
     ) as mock:
         yield mock
 
@@ -203,15 +206,17 @@ def mock_allowed_path():
 
 @pytest.fixture
 async def matrix_bot(
-        hass: HomeAssistant, mock_client, mock_save_json, mock_allowed_path
+    hass: HomeAssistant, mock_client, mock_save_json, mock_allowed_path
 ) -> MatrixBot:
     """Set up Matrix and Notify component.
 
     The resulting MatrixBot will have a mocked _client.
     """
-    MOCK_CONFIG_ENTRY.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(MOCK_CONFIG_ENTRY.entry_id)
-    # assert await async_setup_component(hass, MATRIX_DOMAIN, MOCK_CONFIG_DATA)
+    # MOCK_CONFIG_ENTRY.add_to_hass(hass)
+    # assert await hass.config_entries.async_setup(MOCK_CONFIG_ENTRY.entry_id)
+    assert await hass.config_entries.flow.async_init(
+        MATRIX_DOMAIN, context={"source": SOURCE_IMPORT}, data=MOCK_CONFIG_DATA
+    )
     assert await async_setup_component(hass, NOTIFY_DOMAIN, MOCK_CONFIG_DATA)
     await hass.async_block_till_done()
     assert isinstance(matrix_bot := hass.data[MATRIX_DOMAIN][TEST_MXID], MatrixBot)

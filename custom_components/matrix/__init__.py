@@ -8,9 +8,24 @@ import os
 import re
 from typing import NewType, TypedDict
 
-from PIL import Image
 import aiofiles.os
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from PIL import Image
+from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    CONF_VERIFY_SSL,
+    EVENT_HOMEASSISTANT_START,
+    EVENT_HOMEASSISTANT_STOP,
+)
+from homeassistant.core import Event as HassEvent, HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.helpers.json import save_json
+from homeassistant.util.json import JsonObjectType, load_json_object
 from nio import AsyncClient, Event, MatrixRoom
 from nio.events.room_events import RoomMessageText
 from nio.responses import (
@@ -22,23 +37,6 @@ from nio.responses import (
     UploadError,
     UploadResponse,
 )
-import voluptuous as vol
-
-from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
-from homeassistant.const import (
-    CONF_NAME,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
-)
-from homeassistant.core import Event as HassEvent, HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import JsonObjectType, load_json_object
 
 from .const import DOMAIN, FORMAT_HTML, FORMAT_TEXT, SERVICE_SEND_MESSAGE
 
@@ -63,7 +61,7 @@ ATTR_FORMAT = "format"  # optional message format
 ATTR_IMAGES = "images"  # optional images
 
 WordCommand = NewType("WordCommand", str)
-ExpressionCommand = NewType("ExpressionCommand", re.Pattern)
+ExpressionCommand = NewType("ExpressionCommand", str)
 RoomID = NewType("RoomID", str)
 
 
@@ -258,7 +256,7 @@ class MatrixBot:
 
         # After single-word commands, check all regex commands in the room.
         for command in self._expression_commands.get(room_id, []):
-            match: re.Match = command[CONF_EXPRESSION].match(message.body)  # type: ignore[literal-required]
+            match: re.Match = re.compile(command[CONF_EXPRESSION]).match(message.body)  # type: ignore[literal-required]
             if not match:
                 continue
             message_data = {
