@@ -10,6 +10,7 @@ from typing import NewType, TypedDict
 
 from PIL import Image
 import aiofiles.os
+from homeassistant.config_entries import ConfigEntry
 from nio import AsyncClient, Event, MatrixRoom
 from nio.events.room_events import RoomMessageText
 from nio.responses import (
@@ -102,7 +103,7 @@ CONFIG_SCHEMA = vol.Schema(
             }
         )
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.REMOVE_EXTRA,
 )
 
 
@@ -120,9 +121,9 @@ SERVICE_SCHEMA_SEND_MESSAGE = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Matrix bot component."""
-    config = config[DOMAIN]
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up a Matrix ConfigEntry."""
+    config = entry.data
 
     matrix_bot = MatrixBot(
         hass,
@@ -134,7 +135,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config[CONF_ROOMS],
         config[CONF_COMMANDS],
     )
-    hass.data[DOMAIN] = matrix_bot
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][config[CONF_USERNAME]] = matrix_bot
 
     hass.services.async_register(
         DOMAIN,
@@ -142,7 +144,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         matrix_bot.handle_send_message,
         schema=SERVICE_SCHEMA_SEND_MESSAGE,
     )
+    return True
 
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload up a Matrix ConfigEntry."""
+    matrix_bot: MatrixBot = hass.data[DOMAIN].pop(entry.data[CONF_USERNAME])
+    await matrix_bot._client.close()
     return True
 
 

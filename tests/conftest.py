@@ -28,7 +28,7 @@ from nio import (
     Response,
     UploadResponse,
 )
-from pytest_homeassistant_custom_component.common import async_capture_events
+from pytest_homeassistant_custom_component.common import async_capture_events, MockConfigEntry
 
 from custom_components.matrix import (
     CONF_COMMANDS,
@@ -105,8 +105,9 @@ class _MockAsyncClient(AsyncClient):
         return UploadResponse(content_uri="mxc://example.com/randomgibberish")
 
 
-MOCK_CONFIG_DATA = {
-    MATRIX_DOMAIN: {
+MOCK_CONFIG_ENTRY = MockConfigEntry(
+    domain=MATRIX_DOMAIN,
+    data={
         CONF_HOMESERVER: "https://matrix.example.com",
         CONF_USERNAME: TEST_MXID,
         CONF_PASSWORD: TEST_PASSWORD,
@@ -118,11 +119,15 @@ MOCK_CONFIG_DATA = {
                 CONF_NAME: "WordTriggerEventName",
             },
             {
-                CONF_EXPRESSION: "My name is (?P<name>.*)",
+                CONF_EXPRESSION: re.compile("My name is (?P<name>.*)"),
                 CONF_NAME: "ExpressionTriggerEventName",
             },
         ],
     },
+)
+
+
+MOCK_CONFIG_DATA = {
     NOTIFY_DOMAIN: {
         CONF_NAME: TEST_NOTIFIER_NAME,
         CONF_PLATFORM: MATRIX_DOMAIN,
@@ -204,11 +209,12 @@ async def matrix_bot(
 
     The resulting MatrixBot will have a mocked _client.
     """
-
-    assert await async_setup_component(hass, MATRIX_DOMAIN, MOCK_CONFIG_DATA)
+    MOCK_CONFIG_ENTRY.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(MOCK_CONFIG_ENTRY.entry_id)
+    # assert await async_setup_component(hass, MATRIX_DOMAIN, MOCK_CONFIG_DATA)
     assert await async_setup_component(hass, NOTIFY_DOMAIN, MOCK_CONFIG_DATA)
     await hass.async_block_till_done()
-    assert isinstance(matrix_bot := hass.data[MATRIX_DOMAIN], MatrixBot)
+    assert isinstance(matrix_bot := hass.data[MATRIX_DOMAIN][TEST_MXID], MatrixBot)
 
     await hass.async_start()
 
