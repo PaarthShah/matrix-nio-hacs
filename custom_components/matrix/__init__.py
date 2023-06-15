@@ -94,11 +94,12 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Optional(CONF_VERIFY_SSL, default=True): cv.boolean,
                 vol.Required(CONF_USERNAME): cv.matches_regex("@[^:]*:.*"),
                 vol.Required(CONF_PASSWORD): cv.string,
-                vol.Optional(CONF_ROOMS, default=[]): vol.All(
-                    cv.ensure_list, [cv.string]
-                ),
-                vol.Optional(CONF_COMMANDS, default=[]): [COMMAND_SCHEMA],
-            }
+                # vol.Optional(CONF_ROOMS, default=[]): vol.All(
+                #     cv.ensure_list, [cv.string]
+                # ),
+                # vol.Optional(CONF_COMMANDS, default=[]): [COMMAND_SCHEMA],
+            },
+            extra=vol.REMOVE_EXTRA
         )
     },
     extra=vol.REMOVE_EXTRA,
@@ -130,8 +131,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         config[CONF_VERIFY_SSL],
         config[CONF_USERNAME],
         config[CONF_PASSWORD],
-        config[CONF_ROOMS],
-        config[CONF_COMMANDS],
+        config.get(CONF_ROOMS, []),
+        config.get(CONF_COMMANDS, []),
     )
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][config[CONF_USERNAME]] = matrix_bot
@@ -200,6 +201,7 @@ class MatrixBot:
             """Run once when Home Assistant finished startup."""
             self._auth_tokens = await self._get_auth_tokens()
             await self._login()
+            await self._store_auth_token(self._client.access_token)
             await self._join_rooms()
             # Sync once so that we don't respond to past events.
             await self._client.sync(timeout=30_000)
@@ -286,7 +288,8 @@ class MatrixBot:
             asyncio.create_task(self._join_room(room_id))
             for room_id in self._listening_rooms
         }
-        await asyncio.wait(rooms)
+        if rooms:
+            await asyncio.wait(rooms)
 
     async def _get_auth_tokens(self) -> JsonObjectType:
         """Read sorted authentication tokens from disk."""
@@ -344,8 +347,6 @@ class MatrixBot:
             raise ConfigEntryAuthFailed(
                 "Login failed, both token and username/password are invalid"
             )
-
-        await self._store_auth_token(self._client.access_token)
 
     async def _send_image(self, image_path: str, target_rooms: list[RoomID]) -> None:
         """Upload an image, then send it to all target_rooms."""
