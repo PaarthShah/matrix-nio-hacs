@@ -102,7 +102,7 @@ class _MockAsyncClient(AsyncClient):
         return None
 
     async def upload(self, *args, **kwargs):
-        return UploadResponse(content_uri="mxc://example.com/randomgibberish")
+        return UploadResponse(content_uri="mxc://example.com/randomgibberish"), None
 
 
 MOCK_CONFIG_DATA = {

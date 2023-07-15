@@ -355,7 +355,7 @@ class MatrixBot:
 
         _LOGGER.debug("Uploading file from path, %s", image_path)
         async with aiofiles.open(image_path, "r+b") as image_file:
-            response = await self._client.upload(
+            response, _ = await self._client.upload(
                 image_file,
                 content_type=mime_type,
                 filename=os.path.basename(image_path),
