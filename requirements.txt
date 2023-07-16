@@ -3,4 +3,4 @@ homeassistant>=2023.5.4
 pip>=21.0,<23.2
 ruff>=0.0.271
 matrix-nio==0.20.2
-Pillow==9.5.0
+Pillow==10.0.0
