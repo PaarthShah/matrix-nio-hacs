@@ -1,6 +1,6 @@
 colorlog==6.7.0
-homeassistant>=2023.5.4
+homeassistant>=2023.7.2
 pip>=21.0,<23.2
-ruff>=0.0.271
-matrix-nio==0.20.2
+ruff==0.0.278
+matrix-nio==0.21.0
 Pillow==10.0.0

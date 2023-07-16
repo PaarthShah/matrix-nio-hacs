@@ -35,7 +35,7 @@ _Integration to integrate with Matrix Homeservers using [matrix-nio](https://git
 7. Done!
 
 ## Usage
-For `v1.0.0`, all documentation available for the [default matrix integrations](https://www.home-assistant.io/integrations/matrix/) is fully-applicable and should work as-stated with 0 changes.
+For `v1.0.X`, all documentation available for the [default matrix integrations](https://www.home-assistant.io/integrations/matrix/) is fully-applicable and should work as-stated with 0 changes.
 
 ## Contributions are welcome!
 
