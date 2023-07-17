@@ -26,7 +26,7 @@ from nio import (
     LoginError,
     LoginResponse,
     Response,
-    UploadResponse,
+    UploadResponse, WhoamiError,
 )
 from pytest_homeassistant_custom_component.common import async_capture_events
 
@@ -49,6 +49,7 @@ TEST_DEFAULT_ROOM = "!DefaultNotificationRoom:example.com"
 TEST_JOINABLE_ROOMS = ["!RoomIdString:example.com", "#RoomAliasString:example.com"]
 TEST_BAD_ROOM = "!UninvitedRoom:example.com"
 TEST_MXID = "@user:example.com"
+TEST_DEVICE_ID = "FAKEID"
 TEST_PASSWORD = "password"
 TEST_TOKEN = "access_token"
 
@@ -63,8 +64,6 @@ def my_enable_custom_integrations(enable_custom_integrations):
 class _MockAsyncClient(AsyncClient):
     """Mock class to simulate MatrixBot._client's I/O methods."""
 
-    logged_in: bool = False
-
     async def close(self):
         return None
 
@@ -76,7 +75,6 @@ class _MockAsyncClient(AsyncClient):
 
     async def login(self, *args, **kwargs):
         if kwargs.get("password") == TEST_PASSWORD or kwargs.get("token") == TEST_TOKEN:
-            self.logged_in = True
             self.access_token = TEST_TOKEN
             return LoginResponse(
                 access_token=TEST_TOKEN,
@@ -84,8 +82,16 @@ class _MockAsyncClient(AsyncClient):
                 user_id=TEST_MXID,
             )
         else:
-            self.logged_in = False
+            self.access_token = ""
             return LoginError(message="LoginError", status_code="status_code")
+
+    async def whoami(self):
+        if self.access_token == TEST_TOKEN:
+            self.user_id = TEST_MXID
+            self.device_id = TEST_DEVICE_ID
+        else:
+            self.access_token = ""
+            return WhoamiError(message="Invalid access token passed.", status_code="M_UNKNOWN_TOKEN")
 
     async def room_send(self, *args, **kwargs):
         if not self.logged_in:

@@ -19,7 +19,7 @@ from nio.responses import (
     LoginError,
     Response,
     UploadError,
-    UploadResponse,
+    UploadResponse, WhoamiError,
 )
 import voluptuous as vol
 
@@ -312,15 +312,20 @@ class MatrixBot:
 
         # If we have an access token
         if (token := self._access_tokens.get(self._mx_id)) is not None:
-            response = await self._client.login(token=token)
-            _LOGGER.debug("Logging in using stored token")
-
-            if isinstance(response, LoginError):
+            _LOGGER.debug("Restoring login from stored access token")
+            self._client.restore_login(
+                user_id=self._client.user_id,
+                device_id=self._client.device_id,
+                access_token=token,
+            )
+            response = await self._client.whoami()
+            if isinstance(response, WhoamiError):
                 _LOGGER.warning(
-                    "Login by token failed: %s, %s",
+                    "Restoring login from access token failed: %s, %s",
                     response.status_code,
                     response.message,
                 )
+                self._client.access_token = ""  # Force a soft-logout if the homeserver didn't.
 
         # If the token login did not succeed
         if not self._client.logged_in:
