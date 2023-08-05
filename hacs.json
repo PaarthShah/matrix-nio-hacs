@@ -2,7 +2,7 @@
     "name": "Matrix Nio",
     "filename": "matrix-nio-hacs.zip",
     "hide_default_branch": true,
-    "homeassistant": "2023.6.0",
+    "homeassistant": "2023.8.1",
     "render_readme": true,
     "zip_release": true
 }

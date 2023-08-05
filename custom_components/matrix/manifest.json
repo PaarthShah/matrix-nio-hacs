@@ -6,6 +6,6 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/PaarthShah/matrix-nio-hacs/issues",
   "loggers": ["matrix_client"],
-  "requirements": ["matrix-nio==0.21.2", "Pillow==10.0.0"],
-  "version": "v1.0.2"
+  "requirements": ["matrix-nio==0.21.2", "Pillow>=10.0.0"],
+  "version": "v1.0.3"
 }
