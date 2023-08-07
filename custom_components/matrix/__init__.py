@@ -8,8 +8,24 @@ import os
 import re
 from typing import NewType, TypedDict
 
-from PIL import Image
 import aiofiles.os
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from PIL import Image
+from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONF_NAME,
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    CONF_VERIFY_SSL,
+    EVENT_HOMEASSISTANT_START,
+    EVENT_HOMEASSISTANT_STOP,
+)
+from homeassistant.core import Event as HassEvent, HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.helpers.json import save_json
+from homeassistant.util.json import JsonObjectType, load_json_object
 from nio import AsyncClient, Event, MatrixRoom
 from nio.events.room_events import RoomMessageText
 from nio.responses import (
@@ -21,23 +37,6 @@ from nio.responses import (
     UploadError,
     UploadResponse, WhoamiError, WhoamiResponse,
 )
-import voluptuous as vol
-
-from homeassistant.components.notify import ATTR_DATA, ATTR_MESSAGE, ATTR_TARGET
-from homeassistant.const import (
-    CONF_NAME,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    CONF_VERIFY_SSL,
-    EVENT_HOMEASSISTANT_START,
-    EVENT_HOMEASSISTANT_STOP,
-)
-from homeassistant.core import Event as HassEvent, HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.json import save_json
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.util.json import JsonObjectType, load_json_object
 
 from .const import DOMAIN, FORMAT_HTML, FORMAT_TEXT, SERVICE_SEND_MESSAGE
 
@@ -62,7 +61,7 @@ ATTR_FORMAT = "format"  # optional message format
 ATTR_IMAGES = "images"  # optional images
 
 WordCommand = NewType("WordCommand", str)
-ExpressionCommand = NewType("ExpressionCommand", re.Pattern)
+ExpressionCommand = NewType("ExpressionCommand", str)
 RoomID = NewType("RoomID", str)
 
 
@@ -95,14 +94,15 @@ CONFIG_SCHEMA = vol.Schema(
                 vol.Optional(CONF_VERIFY_SSL, default=True): cv.boolean,
                 vol.Required(CONF_USERNAME): cv.matches_regex("@[^:]*:.*"),
                 vol.Required(CONF_PASSWORD): cv.string,
-                vol.Optional(CONF_ROOMS, default=[]): vol.All(
-                    cv.ensure_list, [cv.string]
-                ),
-                vol.Optional(CONF_COMMANDS, default=[]): [COMMAND_SCHEMA],
-            }
+                # vol.Optional(CONF_ROOMS, default=[]): vol.All(
+                #     cv.ensure_list, [cv.string]
+                # ),
+                # vol.Optional(CONF_COMMANDS, default=[]): [COMMAND_SCHEMA],
+            },
+            extra=vol.REMOVE_EXTRA
         )
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.REMOVE_EXTRA,
 )
 
 
@@ -120,9 +120,9 @@ SERVICE_SCHEMA_SEND_MESSAGE = vol.Schema(
 )
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Matrix bot component."""
-    config = config[DOMAIN]
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up a Matrix ConfigEntry."""
+    config = entry.data
 
     matrix_bot = MatrixBot(
         hass,
@@ -131,10 +131,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         config[CONF_VERIFY_SSL],
         config[CONF_USERNAME],
         config[CONF_PASSWORD],
-        config[CONF_ROOMS],
-        config[CONF_COMMANDS],
+        config.get(CONF_ROOMS, []),
+        config.get(CONF_COMMANDS, []),
     )
-    hass.data[DOMAIN] = matrix_bot
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][config[CONF_USERNAME]] = matrix_bot
 
     hass.services.async_register(
         DOMAIN,
@@ -142,7 +143,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         matrix_bot.handle_send_message,
         schema=SERVICE_SCHEMA_SEND_MESSAGE,
     )
+    return True
 
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload up a Matrix ConfigEntry."""
+    matrix_bot: MatrixBot = hass.data[DOMAIN].pop(entry.data[CONF_USERNAME])
+    await matrix_bot._client.close()
     return True
 
 
@@ -194,6 +201,7 @@ class MatrixBot:
             """Run once when Home Assistant finished startup."""
             self._access_tokens = await self._get_auth_tokens()
             await self._login()
+            await self._store_auth_token(self._client.access_token)
             await self._join_rooms()
             # Sync once so that we don't respond to past events.
             await self._client.sync(timeout=30_000)
@@ -250,7 +258,7 @@ class MatrixBot:
 
         # After single-word commands, check all regex commands in the room.
         for command in self._expression_commands.get(room_id, []):
-            match: re.Match = command[CONF_EXPRESSION].match(message.body)  # type: ignore[literal-required]
+            match: re.Match = re.compile(command[CONF_EXPRESSION]).match(message.body)  # type: ignore[literal-required]
             if not match:
                 continue
             message_data = {
@@ -280,7 +288,8 @@ class MatrixBot:
             asyncio.create_task(self._join_room(room_id))
             for room_id in self._listening_rooms
         }
-        await asyncio.wait(rooms)
+        if rooms:
+            await asyncio.wait(rooms)
 
     async def _get_auth_tokens(self) -> JsonObjectType:
         """Read sorted access tokens from disk."""
@@ -349,8 +358,6 @@ class MatrixBot:
             raise ConfigEntryAuthFailed(
                 "Login failed, both token and username/password are invalid"
             )
-
-        await self._store_auth_token(self._client.access_token)
 
     async def _send_image(self, image_path: str, target_rooms: list[RoomID]) -> None:
         """Upload an image, then send it to all target_rooms."""
