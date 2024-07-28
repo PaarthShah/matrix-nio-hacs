@@ -1,5 +1,9 @@
 # Matrix Nio - HACS
 
+> [!CAUTION]
+> This project is NO LONGER MAINTAINED... because it's been included directly into Home Assistant core! See [this PR](https://github.com/home-assistant/core/pull/72797) and [this commit](https://github.com/home-assistant/core/commit/4d3b978398818f4fe7a2094cb54f83c20a57ef18)
+
+
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
 ![Downloads][downloads]
